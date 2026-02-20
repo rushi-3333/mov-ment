@@ -59,22 +59,6 @@ const SurveyIcon = () => (
   <svg {...iconProps}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></svg>
 );
 
-const ChatIcon = () => (
-  <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-);
-
-const RescheduleIcon = () => (
-  <svg {...iconProps}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-);
-
-const CancelIcon = () => (
-  <svg {...iconProps}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-);
-
-const MoreIcon = () => (
-  <svg {...iconProps}><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
-);
-
 function UserDashboard() {
   const navigate = useNavigate();
   const [section, setSection] = useState("dashboard");
@@ -125,6 +109,7 @@ function UserDashboard() {
   const [managerRequest, setManagerRequest] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileForm, setProfileForm] = useState({ name: "", phone: "", city: "", area: "", addressLine: "", profilePicture: "" });
+  const [openActionsId, setOpenActionsId] = useState(null);
 
   const token = localStorage.getItem("token");
   const userName = profile?.name || localStorage.getItem("userName") || "User";
@@ -317,6 +302,15 @@ function UserDashboard() {
   useEffect(() => {
     if (surveyEvent) loadSurveyQuestions();
   }, [surveyEvent]);
+
+  useEffect(() => {
+    if (!openActionsId) return;
+    const close = (e) => {
+      if (!e.target.closest(".booking-actions-dropdown")) setOpenActionsId(null);
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openActionsId]);
 
   const loadManagerRequest = async () => {
     try {
@@ -942,43 +936,59 @@ function UserDashboard() {
                       <td><span className={`status-badge status-${ev.status}`}>{ev.status}</span></td>
                       <td className="actions-col">
                         <div className="booking-actions">
-                          <button type="button" className="btn btn-secondary btn-sm btn-icon" onClick={() => downloadInvoice(ev._id)} title="Download invoice"><InvoiceIcon /></button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm btn-icon"
-                            title="Share"
-                            onClick={() => {
-                              const url = window.location.origin + "/user";
-                              const text = `Join my event: ${ev.title} on ${new Date(ev.scheduledAt).toLocaleString()}`;
-                              if (navigator.share) {
-                                navigator.share({ title: ev.title, text, url }).catch(() => {});
-                              } else {
-                                navigator.clipboard.writeText(`${text}\n${url}`);
-                                setError("Link copied to clipboard");
-                                setModalOpen(true);
-                                setTimeout(() => setModalOpen(false), 2000);
-                              }
-                            }}
-                          >
-                            <ShareIcon />
-                          </button>
-                          <button type="button" className="btn btn-secondary btn-sm btn-icon" title="Invite via WhatsApp" onClick={() => { const text = encodeURIComponent(`You're invited to: ${ev.title} on ${new Date(ev.scheduledAt).toLocaleString()}. Details: ${window.location.origin}/user`); window.open(`https://wa.me/?text=${text}`, "_blank"); }}><WhatsAppIcon /></button>
-                          <a href={`mailto:?subject=Invitation: ${ev.title}&body=You're invited to ${ev.title} on ${new Date(ev.scheduledAt).toLocaleString()}.`} className="btn btn-secondary btn-sm btn-icon" title="Invite via Email"><EmailIcon /></a>
-                          {(() => {
-                            const cal = calendarLinks(ev);
-                            return (
-                              <>
-                                <a href={cal.google} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm btn-icon" title="Add to Google Calendar"><CalendarIcon /></a>
-                                <a href={cal.outlook} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm btn-icon" title="Add to Outlook"><CalendarIcon /></a>
-                              </>
-                            );
-                          })()}
-                          {ev.status === "completed" && (
-                            <>
-                              <button type="button" className="btn btn-secondary btn-sm btn-icon" title="Leave feedback" onClick={() => { setFeedbackEvent(ev); setFeedbackRating(5); setFeedbackComment(""); }}><FeedbackIcon /></button>
-                              <button type="button" className="btn btn-secondary btn-sm btn-icon" title="Post-event survey" onClick={() => setSurveyEvent(ev)}><SurveyIcon /></button>
-                            </>
-                          )}
+                          <div className="booking-actions-dropdown">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={(e) => { e.stopPropagation(); setOpenActionsId(openActionsId === ev._id ? null : ev._id); }}
+                              aria-haspopup="true"
+                              aria-expanded={openActionsId === ev._id}
+                            >
+                              Actions ▾
+                            </button>
+                            {openActionsId === ev._id && (
+                              <div className="booking-actions-menu">
+                                <button type="button" className="booking-actions-item" onClick={() => { downloadInvoice(ev._id); setOpenActionsId(null); }}>
+                                  <InvoiceIcon /><span>Invoice</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="booking-actions-item"
+                                  onClick={() => {
+                                    const url = window.location.origin + "/user";
+                                    const text = `Join my event: ${ev.title} on ${new Date(ev.scheduledAt).toLocaleString()}`;
+                                    if (navigator.share) navigator.share({ title: ev.title, text, url }).catch(() => {});
+                                    else { navigator.clipboard.writeText(`${text}\n${url}`); setError("Link copied to clipboard"); setModalOpen(true); setTimeout(() => setModalOpen(false), 2000); }
+                                    setOpenActionsId(null);
+                                  }}
+                                >
+                                  <ShareIcon /><span>Share</span>
+                                </button>
+                                <button type="button" className="booking-actions-item" onClick={() => { const text = encodeURIComponent(`You're invited to: ${ev.title} on ${new Date(ev.scheduledAt).toLocaleString()}. Details: ${window.location.origin}/user`); window.open(`https://wa.me/?text=${text}`, "_blank"); setOpenActionsId(null); }}>
+                                  <WhatsAppIcon /><span>WhatsApp</span>
+                                </button>
+                                <a href={`mailto:?subject=Invitation: ${ev.title}&body=You're invited to ${ev.title} on ${new Date(ev.scheduledAt).toLocaleString()}.`} className="booking-actions-item" onClick={() => setOpenActionsId(null)}>
+                                  <EmailIcon /><span>Email</span>
+                                </a>
+                                <a href={calendarLinks(ev).google} target="_blank" rel="noopener noreferrer" className="booking-actions-item" onClick={() => setOpenActionsId(null)}>
+                                  <CalendarIcon /><span>Google Calendar</span>
+                                </a>
+                                <a href={calendarLinks(ev).outlook} target="_blank" rel="noopener noreferrer" className="booking-actions-item" onClick={() => setOpenActionsId(null)}>
+                                  <CalendarIcon /><span>Outlook</span>
+                                </a>
+                                {ev.status === "completed" && (
+                                  <>
+                                    <button type="button" className="booking-actions-item" onClick={() => { setFeedbackEvent(ev); setFeedbackRating(5); setFeedbackComment(""); setOpenActionsId(null); }}>
+                                      <FeedbackIcon /><span>Leave feedback</span>
+                                    </button>
+                                    <button type="button" className="booking-actions-item" onClick={() => { setSurveyEvent(ev); setOpenActionsId(null); }}>
+                                      <SurveyIcon /><span>Post-event survey</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                           {["accepted", "in_progress"].includes(ev.status) && ev.assignedManager && (
                             <button type="button" className="btn btn-secondary btn-sm" onClick={() => openConversationForEvent(ev._id)} title="Chat with manager">Chat</button>
                           )}

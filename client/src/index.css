@@ -458,22 +458,55 @@ tr:hover td {
 .booking-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
-.booking-actions .btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  min-width: 36px;
-  min-height: 36px;
+.booking-actions-dropdown {
+  position: relative;
 }
 
-.booking-actions .btn-icon svg {
-  display: block;
+.booking-actions-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 200px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  padding: 6px 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.booking-actions-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.booking-actions-item:hover {
+  background: var(--bg-input);
+}
+
+.booking-actions-item svg {
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
 }
 
 .status-badge {

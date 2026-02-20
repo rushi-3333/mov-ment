@@ -1,0 +1,15 @@
+{
+  "name": "mov-ment",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "start:server": "cd server && npm start",
+    "start:client": "cd client && npm run dev",
+    "start": "concurrently -n s,c -c blue,green \"npm run start:server\" \"npm run start:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "description": "Mov-Ment event booking app"
+}

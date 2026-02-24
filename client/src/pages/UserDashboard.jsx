@@ -2,16 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
 import ProfileDropdown from "../components/ProfileDropdown";
+import Avatar from "../components/Avatar";
 
 const _apiUrl = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "";
-const API_BASE = (_apiUrl && _apiUrl !== "/") ? _apiUrl : "http://localhost:5000";
+const API_BASE = (_apiUrl && _apiUrl !== "/") ? _apiUrl.replace(/\/$/, "") : "";
 
 async function parseJsonResponse(res) {
   const text = await res.text();
   const trimmed = text.trim();
   if (trimmed.startsWith("<") || trimmed.toLowerCase().startsWith("<!doctype")) {
     throw new Error(
-      "Backend not responding. Start the API: from the project root run 'npm start', or in a separate terminal run 'cd server && node index.js'. The backend must run on port 5000 (or set VITE_API_URL in client .env)."
+      "Backend is not running or not reachable. Start the API server: run 'npm start' from the project root, or in a new terminal run 'cd server && node index.js'. Then reload the page and try again."
     );
   }
   try {
@@ -1182,16 +1183,37 @@ function UserDashboard() {
             <p style={{ color: "var(--text-muted)", marginBottom: 16 }}>Update your personal details. These help us manage events and serve you better.</p>
             <form onSubmit={saveProfile}>
               <div className="form-group">
-                <label>Profile picture (URL)</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={profileForm.profilePicture}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, profilePicture: e.target.value }))}
-                />
-                {profileForm.profilePicture && (
+                <label>Profile picture</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 1024 * 1024) { setError("Image must be under 1 MB"); setModalOpen(true); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => setProfileForm((f) => ({ ...f, profilePicture: reader.result || "" }));
+                        reader.readAsDataURL(file);
+                        e.target.value = "";
+                      }}
+                      style={{ fontSize: "0.9rem" }}
+                    />
+                    <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "var(--text-muted)" }}>Upload a photo (max 1 MB) or use URL below.</p>
+                  </div>
+                  <div style={{ flex: "1 1 200px" }}>
+                    <input
+                      type="url"
+                      placeholder="Or paste image URL"
+                      value={profileForm.profilePicture.startsWith("data:") ? "" : profileForm.profilePicture}
+                      onChange={(e) => setProfileForm((f) => ({ ...f, profilePicture: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                {(profileForm.profilePicture) && (
                   <div style={{ marginTop: 8 }}>
-                    <img src={profileForm.profilePicture} alt="Preview" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
+                    <Avatar src={profileForm.profilePicture} name={userName} size={64} />
                   </div>
                 )}
               </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Avatar from "./Avatar";
 
 /**
  * Profile icon + dropdown for dashboard header (right corner).
@@ -17,8 +18,6 @@ export default function ProfileDropdown({ userName, profilePictureUrl, onProfile
     return () => document.removeEventListener("click", close);
   }, [open]);
 
-  const initial = (userName || "U").trim().charAt(0).toUpperCase();
-
   return (
     <div className="profile-dropdown-wrap" ref={ref}>
       <button
@@ -29,11 +28,7 @@ export default function ProfileDropdown({ userName, profilePictureUrl, onProfile
         aria-expanded={open}
         aria-label="Profile menu"
       >
-        {profilePictureUrl ? (
-          <img src={profilePictureUrl} alt="" className="profile-dropdown-avatar" />
-        ) : (
-          <span className="profile-dropdown-initial">{initial}</span>
-        )}
+        <Avatar src={profilePictureUrl} name={userName} size={40} />
       </button>
       {open && (
         <div className="profile-dropdown-menu">

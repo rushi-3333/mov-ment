@@ -2,13 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
 import ProfileDropdown from "../components/ProfileDropdown";
+import Avatar from "../components/Avatar";
 
-const API_BASE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "http://localhost:5000";
+const _api = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "";
+const API_BASE = (_api && _api !== "/") ? _api.replace(/\/$/, "") : "";
 
 async function parseJsonResponse(res) {
   const text = await res.text();
   const t = text.trim();
-  if (t.startsWith("<") || t.toLowerCase().startsWith("<!doctype")) throw new Error("Server returned a page instead of data. Is the backend running?");
+  if (t.startsWith("<") || t.toLowerCase().startsWith("<!doctype")) {
+    throw new Error(
+      "Backend is not running or not reachable. Start the API server: run 'npm start' from the project root, or in a new terminal run 'cd server && node index.js'. Then reload the page and try again."
+    );
+  }
   try {
     return t ? JSON.parse(text) : {};
   } catch (e) {
@@ -31,6 +37,8 @@ function AdminDashboard() {
   const [userActivity, setUserActivity] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [reports, setReports] = useState(null);
+  const [reportsPeriod, setReportsPeriod] = useState("month");
+  const [predictive, setPredictive] = useState(null);
   const [managerPerf, setManagerPerf] = useState([]);
   const [loadBalancing, setLoadBalancing] = useState(null);
   const [promotions, setPromotions] = useState([]);
@@ -211,6 +219,16 @@ function AdminDashboard() {
       setModalOpen(true);
     }
   };
+  const loadPredictive = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/analytics/predictive`, { headers: { Authorization: `Bearer ${token}` } });
+      if (checkAuth(res)) return;
+      const data = await parseJsonResponse(res);
+      if (res.ok) setPredictive(data);
+    } catch (err) {
+      setPredictive(null);
+    }
+  };
   const loadPromotions = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/promotions`, { headers: { Authorization: `Bearer ${token}` } });
@@ -228,8 +246,8 @@ function AdminDashboard() {
     if (activeSection === "complaints") loadSupportTickets();
     if (activeSection === "refunds") loadRefunds();
     if (activeSection === "activity") loadUserActivity();
-    if (activeSection === "analytics") { loadAnalytics(); loadManagerPerf(); loadLoadBalancing(); }
-    if (activeSection === "reports") loadReports("month");
+    if (activeSection === "analytics") { loadAnalytics(); loadManagerPerf(); loadLoadBalancing(); loadPredictive(); }
+    if (activeSection === "reports") loadReports(reportsPeriod);
     if (activeSection === "notifications") {} // no list to load
     if (activeSection === "promotions") loadPromotions();
     if (activeSection === "manager-requests") loadManagerRequests();
@@ -370,7 +388,8 @@ function AdminDashboard() {
     e.preventDefault();
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/api/user/profile`, {
+      const url = API_BASE ? `${API_BASE}/api/user/profile` : "/api/user/profile";
+      const res = await fetch(url, {
         method: "PATCH",
         headers: { ...json(), Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -548,6 +567,7 @@ function AdminDashboard() {
           <span className="admin-sidebar-hamburger" />
         </button>
         <nav className="admin-sidebar-nav">
+          <div className="admin-nav-group">User management</div>
           <button type="button" className={`admin-nav-item ${activeSection === "users" ? "active" : ""}`} onClick={() => openSection("users")}>
             All users
           </button>
@@ -560,14 +580,16 @@ function AdminDashboard() {
           <button type="button" className={`admin-nav-item ${activeSection === "managers" ? "active" : ""}`} onClick={() => openSection("managers")}>
             Managers
           </button>
+          <div className="admin-nav-group">Event & team</div>
           <button type="button" className={`admin-nav-item ${activeSection === "events" ? "active" : ""}`} onClick={() => openSection("events")}>
             Events & teams
           </button>
           <button type="button" className={`admin-nav-item ${activeSection === "conversations" ? "active" : ""}`} onClick={() => openSection("conversations")}>
             Manager–Customer chat
           </button>
+          <div className="admin-nav-group">Support</div>
           <button type="button" className={`admin-nav-item ${activeSection === "complaints" ? "active" : ""}`} onClick={() => openSection("complaints")}>
-            Complaints
+            Complaints & tickets
           </button>
           <button type="button" className={`admin-nav-item ${activeSection === "refunds" ? "active" : ""}`} onClick={() => openSection("refunds")}>
             Refunds
@@ -575,15 +597,22 @@ function AdminDashboard() {
           <button type="button" className={`admin-nav-item ${activeSection === "activity" ? "active" : ""}`} onClick={() => openSection("activity")}>
             User activity
           </button>
+          <div className="admin-nav-group">Reports & analytics</div>
           <button type="button" className={`admin-nav-item ${activeSection === "analytics" ? "active" : ""}`} onClick={() => openSection("analytics")}>
-            Reports & analytics
+            Dashboard & charts
           </button>
+          <button type="button" className={`admin-nav-item ${activeSection === "reports" ? "active" : ""}`} onClick={() => openSection("reports")}>
+            Weekly / monthly reports
+          </button>
+          <div className="admin-nav-group">Notifications & alerts</div>
           <button type="button" className={`admin-nav-item ${activeSection === "notifications" ? "active" : ""}`} onClick={() => openSection("notifications")}>
-            Notifications
+            Send notifications
           </button>
+          <div className="admin-nav-group">Promotions & offers</div>
           <button type="button" className={`admin-nav-item ${activeSection === "promotions" ? "active" : ""}`} onClick={() => openSection("promotions")}>
-            Promotions
+            Discount codes & offers
           </button>
+          <div className="admin-nav-group">Account</div>
           <button type="button" className={`admin-nav-item ${activeSection === "profile" ? "active" : ""}`} onClick={() => openSection("profile")}>
             Profile
           </button>
@@ -980,6 +1009,28 @@ function AdminDashboard() {
                 </div>
               </div>
             )}
+            {analytics?.byStatus && Object.keys(analytics.byStatus).length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <h4 style={{ marginBottom: 8 }}>Bookings by status (chart)</h4>
+                <div className="admin-chart-bars">
+                  {Object.entries(analytics.byStatus).map(([status, count]) => {
+                    const max = Math.max(...Object.values(analytics.byStatus), 1);
+                    const pct = (count / max) * 100;
+                    return (
+                      <div key={status} style={{ marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: "0.9rem" }}>
+                          <span className={`status-badge status-${status}`}>{status}</span>
+                          <span>{count}</span>
+                        </div>
+                        <div style={{ height: 8, background: "var(--bg-input)", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: "var(--primary)", borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {analytics?.byType && Object.keys(analytics.byType).length > 0 && (
               <div style={{ marginBottom: 24 }}>
                 <h4 style={{ marginBottom: 8 }}>Bookings by event type</h4>
@@ -994,11 +1045,23 @@ function AdminDashboard() {
             )}
             {analytics?.highDemandDates && analytics.highDemandDates.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <h4 style={{ marginBottom: 8 }}>High-demand dates (predictive)</h4>
+                <h4 style={{ marginBottom: 8 }}>High-demand dates (this month)</h4>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {analytics.highDemandDates.map((d) => (
                     <span key={d._id} style={{ padding: "4px 8px", background: "var(--bg-input)", borderRadius: 6, fontSize: "0.9rem" }}>{d._id}: {d.count}</span>
                   ))}
+                </div>
+              </div>
+            )}
+            {predictive?.highDemandDates && predictive.highDemandDates.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <h4 style={{ marginBottom: 8 }}>Predictive: high-demand dates (next 30 days)</h4>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 8 }}>Based on historical same-weekday booking pattern.</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {predictive.highDemandDates.slice(0, 15).map((d) => (
+                    <span key={d.date} style={{ padding: "4px 8px", background: "var(--primary)", color: "#fff", borderRadius: 6, fontSize: "0.85rem" }}>{d.date} ({d.dayOfWeek})</span>
+                  ))}
+                  {predictive.highDemandDates.length > 15 && <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>+{predictive.highDemandDates.length - 15} more</span>}
                 </div>
               </div>
             )}
@@ -1036,6 +1099,45 @@ function AdminDashboard() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {activeSection === "reports" && (
+          <section className="section">
+            <h2 className="section-title">Weekly / monthly reports</h2>
+            <p style={{ color: "var(--text-muted)", marginBottom: 16 }}>Track revenue, bookings, and customer feedback by period. Generate reports for insights.</p>
+            <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+              <button type="button" className={`btn btn-sm ${reportsPeriod === "week" ? "btn-primary" : "btn-secondary"}`} onClick={() => { setReportsPeriod("week"); loadReports("week"); }}>Last 7 days</button>
+              <button type="button" className={`btn btn-sm ${reportsPeriod === "month" ? "btn-primary" : "btn-secondary"}`} onClick={() => { setReportsPeriod("month"); loadReports("month"); }}>This month</button>
+            </div>
+            {reports && (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 16, marginBottom: 24 }}>
+                  <div style={{ padding: 16, background: "var(--bg-input)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Revenue</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>₹{reports.revenue ?? 0}</div>
+                  </div>
+                  <div style={{ padding: 16, background: "var(--bg-input)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Bookings</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{reports.bookings ?? 0}</div>
+                  </div>
+                  <div style={{ padding: 16, background: "var(--bg-input)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Cancelled</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{reports.cancelled ?? 0}</div>
+                  </div>
+                  <div style={{ padding: 16, background: "var(--bg-input)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Avg rating</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{reports.avgRating ?? 0} ★</div>
+                  </div>
+                  <div style={{ padding: 16, background: "var(--bg-input)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Feedback</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{reports.feedbackCount ?? 0}</div>
+                  </div>
+                </div>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Period: {reports.start ? new Date(reports.start).toLocaleDateString() : "—"} to {reports.end ? new Date(reports.end).toLocaleDateString() : "—"}</p>
+              </>
+            )}
+            {!reports && activeSection === "reports" && <p style={{ color: "var(--text-muted)" }}>Select a period above to load the report.</p>}
           </section>
         )}
 
@@ -1126,11 +1228,37 @@ function AdminDashboard() {
             <p style={{ color: "var(--text-muted)", marginBottom: 16 }}>Update your admin details.</p>
             <form onSubmit={saveProfile}>
               <div className="form-group">
-                <label>Profile picture (URL)</label>
-                <input type="url" placeholder="https://..." value={profileForm.profilePicture} onChange={(e) => setProfileForm((f) => ({ ...f, profilePicture: e.target.value }))} />
-                {profileForm.profilePicture && (
+                <label>Profile picture</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 1024 * 1024) { setError("Image must be under 1 MB"); setModalOpen(true); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => setProfileForm((f) => ({ ...f, profilePicture: reader.result || "" }));
+                        reader.readAsDataURL(file);
+                        e.target.value = "";
+                      }}
+                      style={{ fontSize: "0.9rem" }}
+                    />
+                    <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "var(--text-muted)" }}>Upload a photo (max 1 MB) or use URL below.</p>
+                  </div>
+                  <div style={{ flex: "1 1 200px" }}>
+                    <input
+                      type="url"
+                      placeholder="Or paste image URL"
+                      value={profileForm.profilePicture.startsWith("data:") ? "" : profileForm.profilePicture}
+                      onChange={(e) => setProfileForm((f) => ({ ...f, profilePicture: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                {(profileForm.profilePicture) && (
                   <div style={{ marginTop: 8 }}>
-                    <img src={profileForm.profilePicture} alt="Preview" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
+                    <Avatar src={profileForm.profilePicture} name={userName} size={64} />
                   </div>
                 )}
               </div>

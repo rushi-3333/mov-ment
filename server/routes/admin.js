@@ -538,6 +538,39 @@ router.get("/analytics/load", auth(), async (req, res) => {
   }
 });
 
+// Predictive analytics: high-demand dates for next 30 days (based on historical same-weekday pattern)
+router.get("/analytics/predictive", auth(), async (req, res) => {
+  try {
+    const current = await requireAdminOrOwner(req, res);
+    if (!current) return;
+    const now = new Date();
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    const historical = await Event.aggregate([
+      { $match: { status: { $ne: "cancelled" }, scheduledAt: { $gte: oneYearAgo } } },
+      { $group: { _id: { $dayOfWeek: "$scheduledAt" }, count: { $sum: 1 } } },
+    ]);
+    const byDayOfWeek = {};
+    historical.forEach((x) => { byDayOfWeek[x._id] = x.count; });
+    const next30 = [];
+    for (let d = 0; d < 30; d++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() + d);
+      const dayOfWeek = date.getDay() || 7; // 1=Mon .. 7=Sun for consistency
+      const avgDemand = byDayOfWeek[dayOfWeek] || 0;
+      next30.push({
+        date: date.toISOString().slice(0, 10),
+        dayOfWeek: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()],
+        predictedDemand: Math.round(avgDemand * 0.1) || (avgDemand ? 1 : 0),
+        note: avgDemand ? "Based on historical same weekday" : "No history",
+      });
+    }
+    return res.json({ period: "next_30_days", highDemandDates: next30.filter((x) => x.predictedDemand > 0), allDates: next30 });
+  } catch (err) {
+    console.error("Admin predictive analytics error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ——— Notifications & Alerts ———
 router.post("/notifications/send", auth(), async (req, res) => {
   try {

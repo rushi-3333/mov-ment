@@ -70,7 +70,7 @@ router.post("/login", async (req, res) => {
     }
 
     const query = email ? { email: email.trim().toLowerCase() } : { phone: String(phone).trim() };
-    const user = await User.findOne(query);
+    const user = await User.findOne(query).select("name email role approved twoFactorEnabled twoFactorSecret profilePicture");
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -105,6 +105,7 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        profilePicture: user.profilePicture || undefined,
       },
     });
   } catch (err) {
@@ -124,7 +125,7 @@ router.post("/login/verify-2fa", async (req, res) => {
       return res.status(400).json({ message: "User and verification code required" });
     }
 
-    const user = await User.findById(tempUserId);
+    const user = await User.findById(tempUserId).select("name email role twoFactorEnabled twoFactorSecret profilePicture");
     if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
       return res.status(401).json({ message: "Invalid or expired. Please log in again." });
     }
@@ -150,6 +151,7 @@ router.post("/login/verify-2fa", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        profilePicture: user.profilePicture || undefined,
       },
     });
   } catch (err) {

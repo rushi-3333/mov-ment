@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
+import Avatar from "../components/Avatar";
 
-const API_BASE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "http://localhost:5000";
+const _api = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "";
+const API_BASE = (_api && _api !== "/") ? _api.replace(/\/$/, "") : "";
 
 async function parseJsonResponse(res) {
   const text = await res.text();
@@ -24,6 +26,22 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loggedInProfile, setLoggedInProfile] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) { setCheckingAuth(false); return; }
+    const url = API_BASE ? `${API_BASE}/api/user/profile` : "/api/user/profile";
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { setLoggedInProfile(data || null); setCheckingAuth(false); })
+      .catch(() => setCheckingAuth(false));
+  }, []);
+
+  const goToDashboard = () => {
+    navigate("/home", { replace: true });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,10 +66,8 @@ function LoginPage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.user?.role || "user");
       localStorage.setItem("userName", data.user?.name || "");
-      const role = data.user?.role || "user";
-      if (role === "manager") navigate("/manager", { replace: true });
-      else if (role === "admin" || role === "owner") navigate("/admin", { replace: true });
-      else navigate("/user", { replace: true });
+      if (data.user?.profilePicture) localStorage.setItem("profilePicture", data.user.profilePicture);
+      navigate("/home", { replace: true });
     } catch (err) {
       setError(err.message || "Connection error. Is the server running on port 5000?");
       setModalOpen(true);
@@ -75,10 +91,8 @@ function LoginPage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.user?.role || "user");
       localStorage.setItem("userName", data.user?.name || "");
-      const role = data.user?.role || "user";
-      if (role === "manager") navigate("/manager", { replace: true });
-      else if (role === "admin" || role === "owner") navigate("/admin", { replace: true });
-      else navigate("/user", { replace: true });
+      if (data.user?.profilePicture) localStorage.setItem("profilePicture", data.user.profilePicture);
+      navigate("/home", { replace: true });
     } catch (err) {
       setError(err.message);
       setModalOpen(true);
@@ -92,6 +106,26 @@ function LoginPage() {
       <div className="container">
         <h1 className="brand">Mov<span>-</span>Ment</h1>
         <div className="card">
+          {checkingAuth ? (
+            <p className="card-subtitle">Checking…</p>
+          ) : loggedInProfile ? (
+            <>
+              <h2 className="card-title">Already signed in</h2>
+              <p className="card-subtitle">You are logged in. Go to your dashboard or sign out.</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+                <Avatar src={loggedInProfile.profilePicture} name={loggedInProfile.name} size={56} />
+                <div>
+                  <strong style={{ fontSize: "1.1rem" }}>{loggedInProfile.name || "User"}</strong>
+                  {loggedInProfile.email && <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: "0.9rem" }}>{loggedInProfile.email}</p>}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button type="button" className="btn btn-primary" onClick={goToDashboard}>Go to dashboard</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { localStorage.clear(); setLoggedInProfile(null); }}>Sign out</button>
+              </div>
+            </>
+          ) : (
+            <>
           <h2 className="card-title">Sign in</h2>
           <p className="card-subtitle">
             {twoFactor ? "Enter the 6-digit code from your authenticator app" : "Sign in with email or phone."}
@@ -151,6 +185,8 @@ function LoginPage() {
           <p className="auth-footer">
             Don’t have an account? <Link to="/register">Register</Link>
           </p>
+            </>
+          )}
         </div>
       </div>
 

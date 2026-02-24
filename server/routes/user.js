@@ -59,7 +59,12 @@ router.patch("/profile", auth(), async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     if (name !== undefined) user.name = String(name).trim() || user.name;
     if (phone !== undefined) user.phone = String(phone).trim();
-    if (profilePicture !== undefined) user.profilePicture = String(profilePicture).trim();
+    if (profilePicture !== undefined) {
+      const val = typeof profilePicture === "string" ? profilePicture.trim() : "";
+      // Allow URL or data URL (base64); cap length to avoid huge payloads (~2MB base64)
+      const maxLen = 2800000;
+      user.profilePicture = val.length > maxLen ? val.slice(0, maxLen) : val;
+    }
     if (location && typeof location === "object") {
       if (location.city !== undefined) user.location = user.location || {};
       if (location.city !== undefined) user.location.city = String(location.city).trim();

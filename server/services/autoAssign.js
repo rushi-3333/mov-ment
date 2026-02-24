@@ -57,6 +57,15 @@ async function runRemindersOnce() {
         body: `Your event "${event.title}" is scheduled for ${new Date(event.scheduledAt).toLocaleString()}.`,
         relatedEvent: event._id,
       });
+      if (event.assignedManager) {
+        await Notification.create({
+          user: event.assignedManager,
+          type: "reminder",
+          title: "Event reminder",
+          body: `Event "${event.title}" is scheduled for ${new Date(event.scheduledAt).toLocaleString()}.`,
+          relatedEvent: event._id,
+        });
+      }
       event.reminderSentAt = new Date();
       await event.save();
     } catch (err) {

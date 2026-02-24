@@ -265,6 +265,23 @@ router.post("/:id/cancel", auth(["user", "admin", "owner"]), async (req, res) =>
     event.statusHistory.push({ status: "cancelled", by: req.user.id });
     await event.save();
     UserActivity.create({ user: req.user.id, action: "booking_cancelled", entityType: "Event", entityId: event._id }).catch(() => {});
+    // Emergency alert: notify customer and assigned manager
+    await Notification.create({
+      user: event.bookedBy,
+      type: "alert",
+      title: "Booking cancelled",
+      body: `Your event "${event.title}" has been cancelled.`,
+      relatedEvent: event._id,
+    }).catch(() => {});
+    if (event.assignedManager) {
+      await Notification.create({
+        user: event.assignedManager,
+        type: "alert",
+        title: "Event cancelled",
+        body: `Event "${event.title}" was cancelled by the customer.`,
+        relatedEvent: event._id,
+      }).catch(() => {});
+    }
     return res.json(event);
   } catch (err) {
     console.error("Cancel event error:", err);
@@ -288,6 +305,24 @@ router.post("/:id/reschedule", auth(["user", "admin", "owner"]), async (req, res
     event.scheduledAt = new Date(scheduledAt);
     await event.save();
     UserActivity.create({ user: req.user.id, action: "booking_rescheduled", entityType: "Event", entityId: event._id }).catch(() => {});
+    // Notify customer and manager of reschedule
+    const newDateStr = new Date(scheduledAt).toLocaleString();
+    await Notification.create({
+      user: event.bookedBy,
+      type: "general",
+      title: "Event rescheduled",
+      body: `Your event "${event.title}" has been rescheduled to ${newDateStr}.`,
+      relatedEvent: event._id,
+    }).catch(() => {});
+    if (event.assignedManager) {
+      await Notification.create({
+        user: event.assignedManager,
+        type: "general",
+        title: "Event rescheduled",
+        body: `Event "${event.title}" was rescheduled to ${newDateStr}.`,
+        relatedEvent: event._id,
+      }).catch(() => {});
+    }
     return res.json(event);
   } catch (err) {
     console.error("Reschedule event error:", err);
@@ -319,6 +354,26 @@ router.post(
         by: req.user.id,
       });
       await event.save();
+
+      // Emergency alert when manager/admin marks event as cancelled
+      if (status === "cancelled") {
+        await Notification.create({
+          user: event.bookedBy,
+          type: "alert",
+          title: "Event cancelled",
+          body: `Your event "${event.title}" has been cancelled. Contact support if you have questions.`,
+          relatedEvent: event._id,
+        }).catch(() => {});
+        if (event.assignedManager) {
+          await Notification.create({
+            user: event.assignedManager,
+            type: "alert",
+            title: "Event cancelled",
+            body: `Event "${event.title}" was cancelled.`,
+            relatedEvent: event._id,
+          }).catch(() => {});
+        }
+      }
 
       return res.json(event);
     } catch (err) {

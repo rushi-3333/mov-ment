@@ -1,91 +1,163 @@
 # Mov-Ment
 
-Event booking app: customers book events, managers handle them, admin/owner oversees.
+Event booking & management application — customers book events, managers handle them, admin/owner oversees the platform.
 
-**Full run / stop / Git guide:** see [OPERATIONS.md](./OPERATIONS.md)
+**Last updated:** August 13, 2026
 
-**Detailed application documentation (Word):** [Mov-Ment-Application-Documentation.docx](./Mov-Ment-Application-Documentation.docx) — regenerate with `npm run docs`  
-**Production deployment:** see [DEPLOYMENT.md](./DEPLOYMENT.md)
+---
 
-## Quick start
+## Prerequisites (install before running)
 
-### 1. One-command setup
+Install these **once** on your machine before you run the app:
 
-From the project root:
+| # | Tool | Minimum version | How to check | Install |
+|---|------|-----------------|--------------|---------|
+| 1 | **Node.js** | 18 or higher | `node -v` | [nodejs.org](https://nodejs.org/) |
+| 2 | **npm** | Comes with Node | `npm -v` | Installed with Node.js |
+| 3 | **MongoDB** | Local or Atlas | — | [MongoDB Community](https://www.mongodb.com/try/download/community) **or** free [MongoDB Atlas](https://www.mongodb.com/atlas) cloud |
+
+**Optional (recommended):**
+- **Git** — to clone/pull this repo: [git-scm.com](https://git-scm.com/)
+- **Python 3** — only if you want to regenerate the Word doc: `pip install python-docx`
+
+---
+
+## How to run the application
+
+### Step 1 — Get the project
+
+```bash
+git clone https://github.com/rushi-3333/mov-ment.git
+cd mov-ment
+```
+
+Or open the folder if you already have it locally.
+
+### Step 2 — Install dependencies (required before first run)
+
+From the **project root** folder:
 
 ```bash
 npm run setup
 ```
 
-This installs dependencies and creates `server/.env` and `client/.env` if they are missing.
+This command:
+- Installs packages for root, `server/`, and `client/`
+- Creates `server/.env` and `client/.env` if they do not exist
 
-### 2. Configure server (if using Atlas)
+**Alternative (manual install):**
 
-Edit `server/.env`:
+```bash
+npm run install:all
+npm run setup:env
+```
 
-- `PORT` — default `5000`
-- `MONGO_URI` — MongoDB connection string
-- `JWT_SECRET` — at least 32 characters
+### Step 3 — Configure environment
 
-Local MongoDB example:
+Edit **`server/.env`** (created in Step 2):
 
 ```env
+PORT=5000
 MONGO_URI=mongodb://localhost:27017/movment
 JWT_SECRET=your_secret_at_least_32_characters_long
 ```
 
-### 3. Run the app
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MONGO_URI` | Yes | MongoDB connection string (local or Atlas) |
+| `JWT_SECRET` | Yes | Random string, **minimum 32 characters** |
+| `PORT` | No | API port (default `5000`) |
+
+**Using MongoDB Atlas:** copy your connection string into `MONGO_URI` and add your IP under Atlas → Network Access.
+
+### Step 4 — Start the application
 
 ```bash
 npm start
 ```
 
-| Service   | URL                      |
-|-----------|--------------------------|
-| Frontend  | http://localhost:5173    |
-| Backend   | http://localhost:5000    |
+Wait until you see both servers running in the terminal.
 
-Stop with **Ctrl + C**.
+| Service | URL |
+|---------|-----|
+| **Frontend (open in browser)** | http://localhost:5173 |
+| **Backend API** | http://localhost:5000 |
+| **Health check** | http://localhost:5000/api/health |
 
-### 4. Test accounts (auto-created on first server start)
+### Step 5 — Stop the application
 
-| Role    | Email               | Password     |
-|---------|---------------------|--------------|
-| Owner   | admin@gmail.com     | admin3168    |
-| User    | user@gmail.com      | user3168     |
-| Manager | manager@gmail.com   | manager3168  |
+Press **`Ctrl + C`** in the terminal where `npm start` is running.
 
-## Production deployment
+---
 
-See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full guide (Atlas, Docker, Railway, Vercel split, checklist).
+## Run backend and frontend separately (optional)
 
-Quick production run (single server — UI + API on port 5000):
+**Terminal 1 — API only:**
 
 ```bash
-npm run setup:env:prod
-# Edit server/.env — MONGO_URI, JWT_SECRET, OWNER_PASSWORD, CLIENT_URL
-
-npm run start:prod
+npm run start:server
 ```
 
-Open **http://localhost:5000** (after build, one URL serves everything).
+**Terminal 2 — Frontend only:**
 
-## Other commands
+```bash
+npm run start:client
+```
 
-| Command            | Description              |
-|--------------------|--------------------------|
-| `npm run lint`     | ESLint (client)          |
-| `npm run build`    | Production build         |
-| `npm run start:prod` | Build frontend + run API in production mode |
-| `npm run setup:env:prod` | Create `server/.env` from production template |
+---
+
+## Test accounts (development)
+
+Created automatically on first server start:
+
+| Role | Email | Password | Dashboard |
+|------|-------|----------|-----------|
+| Owner / Admin | admin@gmail.com | admin3168 | http://localhost:5173/admin |
+| User | user@gmail.com | user3168 | http://localhost:5173/user |
+| Manager | manager@gmail.com | manager3168 | http://localhost:5173/manager |
+
+You can also **Register** a new account from the app home page.
+
+---
+
+## Other useful commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run lint` | Check frontend code quality |
+| `npm run build` | Build frontend for production |
+| `npm run start:prod` | Production build + run (single URL on port 5000) |
+| `npm run docs` | Regenerate `Mov-Ment-Application-Documentation.docx` |
+
+---
+
+## Documentation
+
+| File | Purpose |
+|------|---------|
+| [OPERATIONS.md](./OPERATIONS.md) | Daily dev commands, Git, troubleshooting |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | Production deploy (Docker, Railway, Atlas) |
+| [ATLAS_SETUP.md](./ATLAS_SETUP.md) | MongoDB Atlas setup |
+| [Mov-Ment-Application-Documentation.docx](./Mov-Ment-Application-Documentation.docx) | Full application documentation (Word) |
+
+---
 
 ## Features
 
-- **Users:** Register/login (email or phone), 2FA, book events, cancel/reschedule, invoices, notifications, support, FAQ
-- **Managers:** Accept events, update status, chat, portfolio, resources
-- **Admin/Owner:** Users, managers, events, analytics, refunds, promotions
+- **Users:** Register/login, 2FA, book events, cancel/reschedule, invoices, notifications, support, FAQ
+- **Managers:** Accept events, update status, chat, portfolio, resources, calendar
+- **Admin/Owner:** Users, managers, analytics, refunds, promotions, support tickets
 
-## Tech
+---
 
-- **Backend:** Node.js, Express, MongoDB (Mongoose), JWT
-- **Frontend:** React (Vite), React Router
+## Tech stack
+
+- **Frontend:** React 19, Vite, React Router
+- **Backend:** Node.js, Express 5, MongoDB (Mongoose), JWT
+- **Security:** bcrypt, 2FA (TOTP), Helmet, rate limiting, CORS
+
+---
+
+## Repository
+
+https://github.com/rushi-3333/mov-ment

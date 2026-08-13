@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm run install:all
+
+      - name: Lint client
+        run: npm run lint
+
+      - name: Build client
+        run: npm run build
+
+      - name: Install server production deps
+        run: cd server && npm ci --omit=dev
+
+      - name: Validate production env module
+        run: node -e "process.env.NODE_ENV='production'; process.env.MONGO_URI='mongodb+srv://u:p@cluster.example.net/movmentDB'; process.env.JWT_SECRET='test_secret_at_least_32_characters_long'; require('./server/config/env'); console.log('env ok');"

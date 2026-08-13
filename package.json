@@ -1,0 +1,28 @@
+{
+  "name": "mov-ment",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "setup": "npm run install:all && node scripts/setup-env.js",
+    "setup:env": "node scripts/setup-env.js",
+    "setup:env:prod": "node scripts/setup-env.js --production",
+    "start:server": "cd server && npm start",
+    "start:client": "cd client && npm run dev",
+    "start": "concurrently -n s,c -c blue,green \"npm run start:server\" \"npm run start:client\"",
+    "lint": "cd client && npm run lint",
+    "build": "cd client && npm run build",
+    "build:prod": "cd client && npm run build",
+    "start:prod": "npm run build:prod && cd server && npm run start:prod",
+    "preview": "cd client && npm run preview",
+    "docs": "python scripts/generate-documentation.py"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "description": "Mov-Ment event booking app"
+}

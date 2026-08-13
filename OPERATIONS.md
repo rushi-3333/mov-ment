@@ -298,6 +298,9 @@ git pull origin main
 ## 9. Quick command cheat sheet
 
 ```powershell
+# Regenerate Word documentation (Mov-Ment-Application-Documentation.docx)
+npm run docs
+```
 # Setup (once)
 cd E:\Projects\mov-ment
 npm run setup
